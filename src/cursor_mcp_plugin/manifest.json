@@ -11,12 +11,11 @@
   "permissions": [],
   "networkAccess": {
     "allowedDomains": [
-      "ws://localhost:3055"
+      "*"
     ],
-    "reasoning": "This is a plugin for Cursor that allows you to connect to a local server",
+    "reasoning": "WebSocket for local MCP relay server. Unrestricted HTTPS for loading images and link previews from arbitrary URLs via figma.createImageAsync().",
     "devAllowedDomains": [
-      "http://localhost:3055",
-      "ws://localhost:3055"
+      "*"
     ]
   },
   "documentAccess": "dynamic-page"

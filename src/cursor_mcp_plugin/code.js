@@ -237,6 +237,24 @@ async function handleCommand(command, params) {
       return await setFocus(params);
     case "set_selections":
       return await setSelections(params);
+    case "create_sticky":
+      return await createSticky(params);
+    case "create_section":
+      return await createSection(params);
+    case "create_shape_with_text":
+      return await createShapeWithText(params);
+    case "create_table":
+      return await createTable(params);
+    case "create_code_block":
+      return await createCodeBlock(params);
+    case "create_link_preview":
+      return await createLinkPreview(params);
+    case "set_hyperlink":
+      return await setHyperlink(params);
+    case "create_image":
+      return await createImageNode(params);
+    case "create_page":
+      return await createPage(params);
     default:
       throw new Error(`Unknown command: ${command}`);
   }
@@ -4100,5 +4118,390 @@ async function setSelections(params) {
     selectedNodes: selectedNodes,
     notFoundIds: notFoundIds,
     message: `Selected ${nodes.length} nodes${notFoundIds.length > 0 ? ` (${notFoundIds.length} not found)` : ''}`
+  };
+}
+
+// ============================================================
+// FigJam & extended features
+// ============================================================
+
+async function createSticky(params) {
+  const {
+    x = 0,
+    y = 0,
+    text = "",
+    fillColor,
+    authorVisible = false,
+    name = "Sticky",
+  } = params || {};
+
+  if (figma.editorType !== "figjam") {
+    throw new Error("create_sticky is only available in FigJam");
+  }
+
+  const sticky = figma.createSticky();
+  sticky.x = x;
+  sticky.y = y;
+  sticky.name = name;
+  sticky.authorVisible = authorVisible;
+
+  if (text) {
+    await figma.loadFontAsync(sticky.text.fontName);
+    sticky.text.characters = text;
+  }
+
+  if (fillColor) {
+    sticky.fills = [{
+      type: "SOLID",
+      color: {
+        r: parseFloat(fillColor.r) || 0,
+        g: parseFloat(fillColor.g) || 0,
+        b: parseFloat(fillColor.b) || 0,
+      },
+      opacity: parseFloat(fillColor.a) || 1,
+    }];
+  }
+
+  return {
+    id: sticky.id,
+    name: sticky.name,
+    x: sticky.x,
+    y: sticky.y,
+    text: sticky.text.characters,
+    authorVisible: sticky.authorVisible,
+  };
+}
+
+async function createSection(params) {
+  const {
+    x = 0,
+    y = 0,
+    width = 1000,
+    height = 1000,
+    name = "Section",
+    fillColor,
+    childrenIds = [],
+  } = params || {};
+
+  const section = figma.createSection();
+  section.x = x;
+  section.y = y;
+  section.name = name;
+  section.resizeWithoutConstraints(width, height);
+
+  if (fillColor) {
+    section.fills = [{
+      type: "SOLID",
+      color: {
+        r: parseFloat(fillColor.r) || 0,
+        g: parseFloat(fillColor.g) || 0,
+        b: parseFloat(fillColor.b) || 0,
+      },
+      opacity: parseFloat(fillColor.a) || 1,
+    }];
+  }
+
+  if (childrenIds.length > 0) {
+    for (const childId of childrenIds) {
+      const child = await figma.getNodeByIdAsync(childId);
+      if (child) {
+        section.appendChild(child);
+      }
+    }
+  }
+
+  return {
+    id: section.id,
+    name: section.name,
+    x: section.x,
+    y: section.y,
+    width: section.width,
+    height: section.height,
+  };
+}
+
+async function createShapeWithText(params) {
+  const {
+    x = 0,
+    y = 0,
+    shapeType = "ROUNDED_RECTANGLE",
+    text = "",
+    fillColor,
+    name = "Shape",
+  } = params || {};
+
+  if (figma.editorType !== "figjam") {
+    throw new Error("create_shape_with_text is only available in FigJam");
+  }
+
+  const shape = figma.createShapeWithText();
+  shape.shapeType = shapeType;
+  shape.x = x;
+  shape.y = y;
+  shape.name = name;
+
+  if (text) {
+    await figma.loadFontAsync(shape.text.fontName);
+    shape.text.characters = text;
+  }
+
+  if (fillColor) {
+    shape.fills = [{
+      type: "SOLID",
+      color: {
+        r: parseFloat(fillColor.r) || 0,
+        g: parseFloat(fillColor.g) || 0,
+        b: parseFloat(fillColor.b) || 0,
+      },
+      opacity: parseFloat(fillColor.a) || 1,
+    }];
+  }
+
+  return {
+    id: shape.id,
+    name: shape.name,
+    x: shape.x,
+    y: shape.y,
+    shapeType: shape.shapeType,
+    text: shape.text.characters,
+  };
+}
+
+async function createTable(params) {
+  const {
+    x = 0,
+    y = 0,
+    numRows = 3,
+    numColumns = 3,
+    name = "Table",
+    cellData = [],
+  } = params || {};
+
+  if (figma.editorType !== "figjam") {
+    throw new Error("create_table is only available in FigJam");
+  }
+
+  const table = figma.createTable(numRows, numColumns);
+  table.x = x;
+  table.y = y;
+  table.name = name;
+
+  if (cellData.length > 0) {
+    // Load font once from the first cell
+    const firstCell = table.cellAt(0, 0);
+    await figma.loadFontAsync(firstCell.text.fontName);
+
+    for (const { row, col, text } of cellData) {
+      if (row >= 0 && row < numRows && col >= 0 && col < numColumns) {
+        const cell = table.cellAt(row, col);
+        cell.text.characters = text || "";
+      }
+    }
+  }
+
+  return {
+    id: table.id,
+    name: table.name,
+    x: table.x,
+    y: table.y,
+    numRows: table.numRows,
+    numColumns: table.numColumns,
+  };
+}
+
+async function createCodeBlock(params) {
+  const {
+    x = 0,
+    y = 0,
+    code = "",
+    codeLanguage = "PLAINTEXT",
+    name = "Code Block",
+  } = params || {};
+
+  if (figma.editorType !== "figjam") {
+    throw new Error("create_code_block is only available in FigJam");
+  }
+
+  const codeBlock = figma.createCodeBlock();
+  await figma.loadFontAsync({ family: "Source Code Pro", style: "Medium" });
+  codeBlock.code = code;
+  codeBlock.codeLanguage = codeLanguage;
+  codeBlock.x = x;
+  codeBlock.y = y;
+  codeBlock.name = name;
+
+  return {
+    id: codeBlock.id,
+    name: codeBlock.name,
+    x: codeBlock.x,
+    y: codeBlock.y,
+    codeLanguage: codeBlock.codeLanguage,
+  };
+}
+
+async function createLinkPreview(params) {
+  const {
+    url,
+    x = 0,
+    y = 0,
+    name,
+  } = params || {};
+
+  if (figma.editorType !== "figjam") {
+    throw new Error("create_link_preview is only available in FigJam");
+  }
+
+  if (!url) {
+    throw new Error("Missing url parameter");
+  }
+
+  const node = await figma.createLinkPreviewAsync(url);
+  node.x = x;
+  node.y = y;
+  if (name) {
+    node.name = name;
+  }
+
+  return {
+    id: node.id,
+    name: node.name,
+    x: node.x,
+    y: node.y,
+    type: node.type,
+  };
+}
+
+async function setHyperlink(params) {
+  const {
+    nodeId,
+    url,
+    nodeIdTarget,
+    start,
+    end,
+  } = params || {};
+
+  if (!nodeId) {
+    throw new Error("Missing nodeId parameter");
+  }
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) {
+    throw new Error(`Node not found with ID: ${nodeId}`);
+  }
+  if (node.type !== "TEXT") {
+    throw new Error(`Node is not a text node (type: ${node.type})`);
+  }
+
+  let hyperlink = null;
+  if (url) {
+    hyperlink = { type: "URL", value: url };
+  } else if (nodeIdTarget) {
+    hyperlink = { type: "NODE", value: nodeIdTarget };
+  }
+
+  // Load font(s) before modifying text properties
+  const fontName = node.fontName;
+  if (fontName === figma.mixed) {
+    // Mixed fonts — load all unique fonts in the range
+    const rangeStart = start !== undefined ? start : 0;
+    const rangeEnd = end !== undefined ? end : node.characters.length;
+    const fonts = new Set();
+    for (let i = rangeStart; i < rangeEnd; i++) {
+      const fn = node.getRangeFontName(i, i + 1);
+      fonts.add(JSON.stringify(fn));
+    }
+    for (const f of fonts) {
+      await figma.loadFontAsync(JSON.parse(f));
+    }
+  } else {
+    await figma.loadFontAsync(fontName);
+  }
+
+  if (start !== undefined && end !== undefined) {
+    node.setRangeHyperlink(start, end, hyperlink);
+  } else {
+    node.hyperlink = hyperlink;
+  }
+
+  return {
+    id: node.id,
+    name: node.name,
+    hyperlink: hyperlink,
+    start: start !== undefined ? start : 0,
+    end: end !== undefined ? end : node.characters.length,
+  };
+}
+
+async function createImageNode(params) {
+  const {
+    url,
+    imageData,
+    x = 0,
+    y = 0,
+    width,
+    height,
+    scaleMode = "FILL",
+    name = "Image",
+  } = params || {};
+
+  let image;
+  try {
+    if (url) {
+      image = await figma.createImageAsync(url);
+    } else if (imageData) {
+      const bytes = figma.base64Decode(imageData);
+      image = figma.createImage(bytes);
+    } else {
+      throw new Error("Either url or imageData must be provided");
+    }
+  } catch (e) {
+    throw new Error(`Failed to load image: ${e.message || e}`);
+  }
+
+  const size = await image.getSizeAsync();
+  const rect = figma.createRectangle();
+  rect.x = x;
+  rect.y = y;
+  rect.name = name;
+  rect.resize(width || size.width, height || size.height);
+  rect.fills = [{
+    type: "IMAGE",
+    imageHash: image.hash,
+    scaleMode: scaleMode,
+  }];
+
+  figma.currentPage.appendChild(rect);
+
+  return {
+    id: rect.id,
+    name: rect.name,
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    imageHash: image.hash,
+  };
+}
+
+async function createPage(params) {
+  const {
+    name = "New Page",
+    isCurrent = false,
+  } = params || {};
+
+  if (typeof figma.createPage !== "function") {
+    throw new Error("create_page is not available in this editor (FigJam does not support it)");
+  }
+  const page = figma.createPage();
+  page.name = name;
+
+  if (isCurrent) {
+    figma.currentPage = page;
+  }
+
+  return {
+    id: page.id,
+    name: page.name,
+    isCurrent: isCurrent,
   };
 }

@@ -2400,6 +2400,409 @@ server.tool(
     }
   }
 );
+server.tool(
+  "create_sticky",
+  "Create a sticky note in FigJam",
+  {
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    text: import_zod.z.string().optional().describe("Sticky note text content"),
+    fillColor: import_zod.z.object({
+      r: import_zod.z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: import_zod.z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: import_zod.z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: import_zod.z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    }).optional().describe("Background color in RGBA format"),
+    authorVisible: import_zod.z.boolean().optional().describe("Whether to show the author name badge"),
+    name: import_zod.z.string().optional().describe("Layer name for the sticky note")
+  },
+  async ({ x, y, text, fillColor, authorVisible, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_sticky", {
+        x,
+        y,
+        text,
+        fillColor,
+        authorVisible,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created sticky "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating sticky: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_section",
+  "Create a section container in Figma or FigJam",
+  {
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    width: import_zod.z.number().optional().describe("Section width (default 1000)"),
+    height: import_zod.z.number().optional().describe("Section height (default 1000)"),
+    name: import_zod.z.string().optional().describe("Section title"),
+    fillColor: import_zod.z.object({
+      r: import_zod.z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: import_zod.z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: import_zod.z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: import_zod.z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    }).optional().describe("Background color in RGBA format"),
+    childrenIds: import_zod.z.array(import_zod.z.string()).optional().describe("Array of node IDs to move into the section")
+  },
+  async ({ x, y, width, height, name, fillColor, childrenIds }) => {
+    try {
+      const result = await sendCommandToFigma("create_section", {
+        x,
+        y,
+        width,
+        height,
+        name,
+        fillColor,
+        childrenIds
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created section "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating section: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_shape_with_text",
+  "Create a shape with text in FigJam (flowchart nodes, diagrams, etc.)",
+  {
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    shapeType: import_zod.z.enum([
+      "SQUARE",
+      "ELLIPSE",
+      "ROUNDED_RECTANGLE",
+      "DIAMOND",
+      "TRIANGLE_UP",
+      "TRIANGLE_DOWN",
+      "PARALLELOGRAM_RIGHT",
+      "PARALLELOGRAM_LEFT",
+      "ENG_DATABASE",
+      "ENG_QUEUE",
+      "ENG_FILE",
+      "ENG_FOLDER",
+      "TRAPEZOID",
+      "PREDEFINED_PROCESS",
+      "SHIELD",
+      "DOCUMENT_SINGLE",
+      "DOCUMENT_MULTIPLE",
+      "MANUAL_INPUT",
+      "HEXAGON",
+      "CHEVRON",
+      "PENTAGON",
+      "OCTAGON",
+      "PLUS",
+      "ARROW_LEFT",
+      "ARROW_RIGHT",
+      "SUMMING_JUNCTION",
+      "SPEECH_BUBBLE",
+      "INTERNAL_STORAGE",
+      "STAR",
+      "OR"
+    ]).optional().describe("Shape type (default ROUNDED_RECTANGLE)"),
+    text: import_zod.z.string().optional().describe("Text content inside the shape"),
+    fillColor: import_zod.z.object({
+      r: import_zod.z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: import_zod.z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: import_zod.z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: import_zod.z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    }).optional().describe("Shape background color in RGBA format"),
+    name: import_zod.z.string().optional().describe("Layer name")
+  },
+  async ({ x, y, shapeType, text, fillColor, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_shape_with_text", {
+        x,
+        y,
+        shapeType,
+        text,
+        fillColor,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created ${typedResult.shapeType} shape "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating shape: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_table",
+  "Create a table in FigJam",
+  {
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    numRows: import_zod.z.number().min(1).optional().describe("Number of rows (default 3)"),
+    numColumns: import_zod.z.number().min(1).optional().describe("Number of columns (default 3)"),
+    name: import_zod.z.string().optional().describe("Layer name"),
+    cellData: import_zod.z.array(
+      import_zod.z.object({
+        row: import_zod.z.number().describe("Row index (0-based)"),
+        col: import_zod.z.number().describe("Column index (0-based)"),
+        text: import_zod.z.string().describe("Cell text content")
+      })
+    ).optional().describe("Array of cell data to populate the table")
+  },
+  async ({ x, y, numRows, numColumns, name, cellData }) => {
+    try {
+      const result = await sendCommandToFigma("create_table", {
+        x,
+        y,
+        numRows,
+        numColumns,
+        name,
+        cellData
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created ${typedResult.numRows}x${typedResult.numColumns} table "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating table: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_code_block",
+  "Create a code block in FigJam with syntax highlighting",
+  {
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    code: import_zod.z.string().describe("Code content"),
+    codeLanguage: import_zod.z.enum([
+      "TYPESCRIPT",
+      "CPP",
+      "RUBY",
+      "CSS",
+      "JAVASCRIPT",
+      "HTML",
+      "JSON",
+      "GRAPHQL",
+      "PYTHON",
+      "GO",
+      "SQL",
+      "SWIFT",
+      "KOTLIN",
+      "RUST",
+      "BASH",
+      "PLAINTEXT",
+      "DART"
+    ]).optional().describe("Programming language for syntax highlighting (default PLAINTEXT)"),
+    name: import_zod.z.string().optional().describe("Layer name")
+  },
+  async ({ x, y, code, codeLanguage, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_code_block", {
+        x,
+        y,
+        code,
+        codeLanguage,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created code block "${typedResult.name}" (${typedResult.codeLanguage}) with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating code block: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_link_preview",
+  "Create a link preview (embed/unfurl) in FigJam from a URL",
+  {
+    url: import_zod.z.string().describe("URL to create a preview for"),
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    name: import_zod.z.string().optional().describe("Optional layer name override")
+  },
+  async ({ url, x, y, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_link_preview", {
+        url,
+        x,
+        y,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created link preview "${typedResult.name}" (${typedResult.type}) with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating link preview: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "set_hyperlink",
+  "Set a hyperlink on a text node (URL or internal node link)",
+  {
+    nodeId: import_zod.z.string().describe("ID of the text node"),
+    url: import_zod.z.string().optional().describe("URL to link to (provide this OR nodeIdTarget)"),
+    nodeIdTarget: import_zod.z.string().optional().describe("Node ID to link to for internal navigation (provide this OR url)"),
+    start: import_zod.z.number().optional().describe("Start character index for range hyperlink (inclusive, 0-based)"),
+    end: import_zod.z.number().optional().describe("End character index for range hyperlink (exclusive)")
+  },
+  async ({ nodeId, url, nodeIdTarget, start, end }) => {
+    try {
+      const result = await sendCommandToFigma("set_hyperlink", {
+        nodeId,
+        url,
+        nodeIdTarget,
+        start,
+        end
+      });
+      const typedResult = result;
+      const linkDesc = typedResult.hyperlink ? typedResult.hyperlink.type === "URL" ? typedResult.hyperlink.value : `node:${typedResult.hyperlink.value}` : "removed";
+      return {
+        content: [{
+          type: "text",
+          text: `Set hyperlink on "${typedResult.name}" (${typedResult.id}): ${linkDesc}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error setting hyperlink: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_image",
+  "Create an image node from a URL or base64 data",
+  {
+    url: import_zod.z.string().optional().describe("Image URL to load (provide this OR imageData)"),
+    imageData: import_zod.z.string().optional().describe("Base64-encoded image data (provide this OR url)"),
+    x: import_zod.z.number().optional().describe("X position"),
+    y: import_zod.z.number().optional().describe("Y position"),
+    width: import_zod.z.number().optional().describe("Override width (defaults to image native width)"),
+    height: import_zod.z.number().optional().describe("Override height (defaults to image native height)"),
+    scaleMode: import_zod.z.enum(["FILL", "FIT", "CROP", "TILE"]).optional().describe("Image scale mode (default FILL)"),
+    name: import_zod.z.string().optional().describe("Layer name")
+  },
+  async ({ url, imageData, x, y, width, height, scaleMode, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_image", {
+        url,
+        imageData,
+        x,
+        y,
+        width,
+        height,
+        scaleMode,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created image "${typedResult.name}" (${typedResult.width}x${typedResult.height}) with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating image: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_page",
+  "Create a new page in the Figma document",
+  {
+    name: import_zod.z.string().optional().describe("Page name (default 'New Page')"),
+    isCurrent: import_zod.z.boolean().optional().describe("Whether to switch to the new page after creation")
+  },
+  async ({ name, isCurrent }) => {
+    try {
+      const result = await sendCommandToFigma("create_page", {
+        name,
+        isCurrent
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created page "${typedResult.name}" with ID: ${typedResult.id}${typedResult.isCurrent ? " (now current page)" : ""}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating page: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
 async function main() {
   try {
     connectToFigma();

@@ -2378,6 +2378,409 @@ server.tool(
     }
   }
 );
+server.tool(
+  "create_sticky",
+  "Create a sticky note in FigJam",
+  {
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    text: z.string().optional().describe("Sticky note text content"),
+    fillColor: z.object({
+      r: z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    }).optional().describe("Background color in RGBA format"),
+    authorVisible: z.boolean().optional().describe("Whether to show the author name badge"),
+    name: z.string().optional().describe("Layer name for the sticky note")
+  },
+  async ({ x, y, text, fillColor, authorVisible, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_sticky", {
+        x,
+        y,
+        text,
+        fillColor,
+        authorVisible,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created sticky "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating sticky: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_section",
+  "Create a section container in Figma or FigJam",
+  {
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    width: z.number().optional().describe("Section width (default 1000)"),
+    height: z.number().optional().describe("Section height (default 1000)"),
+    name: z.string().optional().describe("Section title"),
+    fillColor: z.object({
+      r: z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    }).optional().describe("Background color in RGBA format"),
+    childrenIds: z.array(z.string()).optional().describe("Array of node IDs to move into the section")
+  },
+  async ({ x, y, width, height, name, fillColor, childrenIds }) => {
+    try {
+      const result = await sendCommandToFigma("create_section", {
+        x,
+        y,
+        width,
+        height,
+        name,
+        fillColor,
+        childrenIds
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created section "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating section: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_shape_with_text",
+  "Create a shape with text in FigJam (flowchart nodes, diagrams, etc.)",
+  {
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    shapeType: z.enum([
+      "SQUARE",
+      "ELLIPSE",
+      "ROUNDED_RECTANGLE",
+      "DIAMOND",
+      "TRIANGLE_UP",
+      "TRIANGLE_DOWN",
+      "PARALLELOGRAM_RIGHT",
+      "PARALLELOGRAM_LEFT",
+      "ENG_DATABASE",
+      "ENG_QUEUE",
+      "ENG_FILE",
+      "ENG_FOLDER",
+      "TRAPEZOID",
+      "PREDEFINED_PROCESS",
+      "SHIELD",
+      "DOCUMENT_SINGLE",
+      "DOCUMENT_MULTIPLE",
+      "MANUAL_INPUT",
+      "HEXAGON",
+      "CHEVRON",
+      "PENTAGON",
+      "OCTAGON",
+      "PLUS",
+      "ARROW_LEFT",
+      "ARROW_RIGHT",
+      "SUMMING_JUNCTION",
+      "SPEECH_BUBBLE",
+      "INTERNAL_STORAGE",
+      "STAR",
+      "OR"
+    ]).optional().describe("Shape type (default ROUNDED_RECTANGLE)"),
+    text: z.string().optional().describe("Text content inside the shape"),
+    fillColor: z.object({
+      r: z.number().min(0).max(1).describe("Red component (0-1)"),
+      g: z.number().min(0).max(1).describe("Green component (0-1)"),
+      b: z.number().min(0).max(1).describe("Blue component (0-1)"),
+      a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)")
+    }).optional().describe("Shape background color in RGBA format"),
+    name: z.string().optional().describe("Layer name")
+  },
+  async ({ x, y, shapeType, text, fillColor, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_shape_with_text", {
+        x,
+        y,
+        shapeType,
+        text,
+        fillColor,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created ${typedResult.shapeType} shape "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating shape: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_table",
+  "Create a table in FigJam",
+  {
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    numRows: z.number().min(1).optional().describe("Number of rows (default 3)"),
+    numColumns: z.number().min(1).optional().describe("Number of columns (default 3)"),
+    name: z.string().optional().describe("Layer name"),
+    cellData: z.array(
+      z.object({
+        row: z.number().describe("Row index (0-based)"),
+        col: z.number().describe("Column index (0-based)"),
+        text: z.string().describe("Cell text content")
+      })
+    ).optional().describe("Array of cell data to populate the table")
+  },
+  async ({ x, y, numRows, numColumns, name, cellData }) => {
+    try {
+      const result = await sendCommandToFigma("create_table", {
+        x,
+        y,
+        numRows,
+        numColumns,
+        name,
+        cellData
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created ${typedResult.numRows}x${typedResult.numColumns} table "${typedResult.name}" with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating table: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_code_block",
+  "Create a code block in FigJam with syntax highlighting",
+  {
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    code: z.string().describe("Code content"),
+    codeLanguage: z.enum([
+      "TYPESCRIPT",
+      "CPP",
+      "RUBY",
+      "CSS",
+      "JAVASCRIPT",
+      "HTML",
+      "JSON",
+      "GRAPHQL",
+      "PYTHON",
+      "GO",
+      "SQL",
+      "SWIFT",
+      "KOTLIN",
+      "RUST",
+      "BASH",
+      "PLAINTEXT",
+      "DART"
+    ]).optional().describe("Programming language for syntax highlighting (default PLAINTEXT)"),
+    name: z.string().optional().describe("Layer name")
+  },
+  async ({ x, y, code, codeLanguage, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_code_block", {
+        x,
+        y,
+        code,
+        codeLanguage,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created code block "${typedResult.name}" (${typedResult.codeLanguage}) with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating code block: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_link_preview",
+  "Create a link preview (embed/unfurl) in FigJam from a URL",
+  {
+    url: z.string().describe("URL to create a preview for"),
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    name: z.string().optional().describe("Optional layer name override")
+  },
+  async ({ url, x, y, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_link_preview", {
+        url,
+        x,
+        y,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created link preview "${typedResult.name}" (${typedResult.type}) with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating link preview: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "set_hyperlink",
+  "Set a hyperlink on a text node (URL or internal node link)",
+  {
+    nodeId: z.string().describe("ID of the text node"),
+    url: z.string().optional().describe("URL to link to (provide this OR nodeIdTarget)"),
+    nodeIdTarget: z.string().optional().describe("Node ID to link to for internal navigation (provide this OR url)"),
+    start: z.number().optional().describe("Start character index for range hyperlink (inclusive, 0-based)"),
+    end: z.number().optional().describe("End character index for range hyperlink (exclusive)")
+  },
+  async ({ nodeId, url, nodeIdTarget, start, end }) => {
+    try {
+      const result = await sendCommandToFigma("set_hyperlink", {
+        nodeId,
+        url,
+        nodeIdTarget,
+        start,
+        end
+      });
+      const typedResult = result;
+      const linkDesc = typedResult.hyperlink ? typedResult.hyperlink.type === "URL" ? typedResult.hyperlink.value : `node:${typedResult.hyperlink.value}` : "removed";
+      return {
+        content: [{
+          type: "text",
+          text: `Set hyperlink on "${typedResult.name}" (${typedResult.id}): ${linkDesc}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error setting hyperlink: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_image",
+  "Create an image node from a URL or base64 data",
+  {
+    url: z.string().optional().describe("Image URL to load (provide this OR imageData)"),
+    imageData: z.string().optional().describe("Base64-encoded image data (provide this OR url)"),
+    x: z.number().optional().describe("X position"),
+    y: z.number().optional().describe("Y position"),
+    width: z.number().optional().describe("Override width (defaults to image native width)"),
+    height: z.number().optional().describe("Override height (defaults to image native height)"),
+    scaleMode: z.enum(["FILL", "FIT", "CROP", "TILE"]).optional().describe("Image scale mode (default FILL)"),
+    name: z.string().optional().describe("Layer name")
+  },
+  async ({ url, imageData, x, y, width, height, scaleMode, name }) => {
+    try {
+      const result = await sendCommandToFigma("create_image", {
+        url,
+        imageData,
+        x,
+        y,
+        width,
+        height,
+        scaleMode,
+        name
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created image "${typedResult.name}" (${typedResult.width}x${typedResult.height}) with ID: ${typedResult.id}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating image: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+server.tool(
+  "create_page",
+  "Create a new page in the Figma document",
+  {
+    name: z.string().optional().describe("Page name (default 'New Page')"),
+    isCurrent: z.boolean().optional().describe("Whether to switch to the new page after creation")
+  },
+  async ({ name, isCurrent }) => {
+    try {
+      const result = await sendCommandToFigma("create_page", {
+        name,
+        isCurrent
+      });
+      const typedResult = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Created page "${typedResult.name}" with ID: ${typedResult.id}${typedResult.isCurrent ? " (now current page)" : ""}`
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating page: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
 async function main() {
   try {
     connectToFigma();
