@@ -2662,7 +2662,10 @@ type FigmaCommand =
   | "set_hyperlink"
   | "create_image"
   | "rename_page"
-  | "create_connector";
+  | "create_connector"
+  | "get_pages"
+  | "move_to_page"
+  | "set_current_page";
 
 type CommandParams = {
   get_document_info: Record<string, never>;
@@ -2887,6 +2890,14 @@ type CommandParams = {
     strokeWeight?: number;
     connectorLineType?: string;
     text?: string;
+  };
+  get_pages: Record<string, never>;
+  move_to_page: {
+    nodeId: string;
+    pageId: string;
+  };
+  set_current_page: {
+    pageId: string;
   };
 
 };
@@ -3580,6 +3591,88 @@ server.tool(
         content: [{
           type: "text",
           text: `Error creating connector: ${error instanceof Error ? error.message : String(error)}`,
+        }],
+      };
+    }
+  }
+);
+
+// Get Pages Tool
+server.tool(
+  "get_pages",
+  "List all pages in the document with their IDs",
+  {},
+  async () => {
+    try {
+      const result = await sendCommandToFigma("get_pages", {});
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(result),
+        }],
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error getting pages: ${error instanceof Error ? error.message : String(error)}`,
+        }],
+      };
+    }
+  }
+);
+
+// Move To Page Tool
+server.tool(
+  "move_to_page",
+  "Move a node from its current page to a different page",
+  {
+    nodeId: z.string().describe("ID of the node to move"),
+    pageId: z.string().describe("ID of the target page"),
+  },
+  async ({ nodeId, pageId }: any) => {
+    try {
+      const result = await sendCommandToFigma("move_to_page", { nodeId, pageId });
+      const typedResult = result as { nodeId: string; nodeName: string; targetPageName: string };
+      return {
+        content: [{
+          type: "text",
+          text: `Moved "${typedResult.nodeName}" to page "${typedResult.targetPageName}"`,
+        }],
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error moving node: ${error instanceof Error ? error.message : String(error)}`,
+        }],
+      };
+    }
+  }
+);
+
+// Set Current Page Tool
+server.tool(
+  "set_current_page",
+  "Switch to a different page in the document",
+  {
+    pageId: z.string().describe("ID of the page to switch to"),
+  },
+  async ({ pageId }: any) => {
+    try {
+      const result = await sendCommandToFigma("set_current_page", { pageId });
+      const typedResult = result as { id: string; name: string };
+      return {
+        content: [{
+          type: "text",
+          text: `Switched to page "${typedResult.name}" (${typedResult.id})`,
+        }],
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error switching page: ${error instanceof Error ? error.message : String(error)}`,
         }],
       };
     }

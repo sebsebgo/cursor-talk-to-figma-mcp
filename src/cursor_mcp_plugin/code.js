@@ -257,6 +257,12 @@ async function handleCommand(command, params) {
       return await renamePage(params);
     case "create_connector":
       return await createSingleConnector(params);
+    case "get_pages":
+      return await getPages();
+    case "move_to_page":
+      return await moveToPage(params);
+    case "set_current_page":
+      return await setCurrentPage(params);
     default:
       throw new Error(`Unknown command: ${command}`);
   }
@@ -4585,5 +4591,61 @@ async function createSingleConnector(params) {
     startNodeId: startNodeId,
     endNodeId: endNodeId,
     text: text || "",
+  };
+}
+
+async function getPages() {
+  const pages = figma.root.children.map(page => {
+    const isCurrent = page.id === figma.currentPage.id;
+    return {
+      id: page.id,
+      name: page.name,
+      isCurrent,
+    };
+  });
+
+  return {
+    pages: pages,
+    currentPageId: figma.currentPage.id,
+    count: pages.length,
+  };
+}
+
+async function moveToPage(params) {
+  const { nodeId, pageId } = params || {};
+
+  if (!nodeId) throw new Error("Missing nodeId parameter");
+  if (!pageId) throw new Error("Missing pageId parameter");
+
+  const node = await figma.getNodeByIdAsync(nodeId);
+  if (!node) throw new Error(`Node not found: ${nodeId}`);
+
+  const targetPage = figma.root.children.find(p => p.id === pageId);
+  if (!targetPage) throw new Error(`Page not found: ${pageId}`);
+
+  await targetPage.loadAsync();
+  targetPage.appendChild(node);
+
+  return {
+    nodeId: node.id,
+    nodeName: node.name,
+    targetPageId: targetPage.id,
+    targetPageName: targetPage.name,
+  };
+}
+
+async function setCurrentPage(params) {
+  const { pageId } = params || {};
+
+  if (!pageId) throw new Error("Missing pageId parameter");
+
+  const targetPage = figma.root.children.find(p => p.id === pageId);
+  if (!targetPage) throw new Error(`Page not found: ${pageId}`);
+
+  await figma.setCurrentPageAsync(targetPage);
+
+  return {
+    id: targetPage.id,
+    name: targetPage.name,
   };
 }
