@@ -2661,7 +2661,8 @@ type FigmaCommand =
   | "create_link_preview"
   | "set_hyperlink"
   | "create_image"
-  | "create_page";
+  | "rename_page"
+  | "create_connector";
 
 type CommandParams = {
   get_document_info: Record<string, never>;
@@ -2873,9 +2874,19 @@ type CommandParams = {
     scaleMode?: string;
     name?: string;
   };
-  create_page: {
-    name?: string;
-    isCurrent?: boolean;
+  rename_page: {
+    pageId?: string;
+    name: string;
+  };
+  create_connector: {
+    startNodeId: string;
+    endNodeId: string;
+    startMagnet?: string;
+    endMagnet?: string;
+    strokeColor?: { r: number; g: number; b: number; a?: number };
+    strokeWeight?: number;
+    connectorLineType?: string;
+    text?: string;
   };
 
 };
@@ -3500,31 +3511,75 @@ server.tool(
   }
 );
 
-// Create Page Tool
+
+// Rename Page Tool
 server.tool(
-  "create_page",
-  "Create a new page in the Figma document",
+  "rename_page",
+  "Rename a page in the Figma/FigJam document",
   {
-    name: z.string().optional().describe("Page name (default 'New Page')"),
-    isCurrent: z.boolean().optional().describe("Whether to switch to the new page after creation"),
+    pageId: z.string().optional().describe("Page ID to rename (defaults to current page if not provided)"),
+    name: z.string().describe("New page name"),
   },
-  async ({ name, isCurrent }: any) => {
+  async ({ pageId, name }: any) => {
     try {
-      const result = await sendCommandToFigma("create_page", {
-        name, isCurrent,
-      });
-      const typedResult = result as { id: string; name: string; isCurrent: boolean };
+      const result = await sendCommandToFigma("rename_page", { pageId, name });
+      const typedResult = result as { id: string; oldName: string; newName: string };
       return {
         content: [{
           type: "text",
-          text: `Created page "${typedResult.name}" with ID: ${typedResult.id}${typedResult.isCurrent ? " (now current page)" : ""}`,
+          text: `Renamed page "${typedResult.oldName}" to "${typedResult.newName}" (ID: ${typedResult.id})`,
         }],
       };
     } catch (error) {
       return {
         content: [{
           type: "text",
-          text: `Error creating page: ${error instanceof Error ? error.message : String(error)}`,
+          text: `Error renaming page: ${error instanceof Error ? error.message : String(error)}`,
+        }],
+      };
+    }
+  }
+);
+
+// Create Connector Tool (FigJam only — standalone, no template needed)
+server.tool(
+  "create_connector",
+  "Create a single connector between two nodes in FigJam (no default connector template needed)",
+  {
+    startNodeId: z.string().describe("ID of the start node"),
+    endNodeId: z.string().describe("ID of the end node"),
+    startMagnet: z.enum(["AUTO", "TOP", "BOTTOM", "LEFT", "RIGHT"]).optional().describe("Where the connector attaches on the start node (default AUTO)"),
+    endMagnet: z.enum(["AUTO", "TOP", "BOTTOM", "LEFT", "RIGHT"]).optional().describe("Where the connector attaches on the end node (default AUTO)"),
+    strokeColor: z
+      .object({
+        r: z.number().min(0).max(1).describe("Red component (0-1)"),
+        g: z.number().min(0).max(1).describe("Green component (0-1)"),
+        b: z.number().min(0).max(1).describe("Blue component (0-1)"),
+        a: z.number().min(0).max(1).optional().describe("Alpha component (0-1)"),
+      })
+      .optional()
+      .describe("Connector stroke color"),
+    strokeWeight: z.number().positive().optional().describe("Connector stroke weight"),
+    connectorLineType: z.enum(["ELBOWED", "STRAIGHT", "CURVE"]).optional().describe("Line style"),
+    text: z.string().optional().describe("Text label on the connector"),
+  },
+  async ({ startNodeId, endNodeId, startMagnet, endMagnet, strokeColor, strokeWeight, connectorLineType, text }: any) => {
+    try {
+      const result = await sendCommandToFigma("create_connector", {
+        startNodeId, endNodeId, startMagnet, endMagnet, strokeColor, strokeWeight, connectorLineType, text,
+      });
+      const typedResult = result as { id: string; startNodeId: string; endNodeId: string; text: string };
+      return {
+        content: [{
+          type: "text",
+          text: `Created connector (${typedResult.id}) from ${typedResult.startNodeId} to ${typedResult.endNodeId}${typedResult.text ? ` with label "${typedResult.text}"` : ""}`,
+        }],
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error creating connector: ${error instanceof Error ? error.message : String(error)}`,
         }],
       };
     }

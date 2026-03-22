@@ -253,8 +253,10 @@ async function handleCommand(command, params) {
       return await setHyperlink(params);
     case "create_image":
       return await createImageNode(params);
-    case "create_page":
-      return await createPage(params);
+    case "rename_page":
+      return await renamePage(params);
+    case "create_connector":
+      return await createSingleConnector(params);
     default:
       throw new Error(`Unknown command: ${command}`);
   }
@@ -4483,25 +4485,105 @@ async function createImageNode(params) {
   };
 }
 
-async function createPage(params) {
+
+async function renamePage(params) {
   const {
-    name = "New Page",
-    isCurrent = false,
+    pageId,
+    name,
   } = params || {};
 
-  if (typeof figma.createPage !== "function") {
-    throw new Error("create_page is not available in this editor (FigJam does not support it)");
+  if (!name) {
+    throw new Error("Missing name parameter");
   }
-  const page = figma.createPage();
-  page.name = name;
 
-  if (isCurrent) {
-    figma.currentPage = page;
+  let page;
+  if (pageId) {
+    page = await figma.getNodeByIdAsync(pageId);
+    if (!page || page.type !== "PAGE") {
+      throw new Error(`Page not found with ID: ${pageId}`);
+    }
+  } else {
+    page = figma.currentPage;
   }
+
+  const oldName = page.name;
+  page.name = name;
 
   return {
     id: page.id,
-    name: page.name,
-    isCurrent: isCurrent,
+    oldName: oldName,
+    newName: page.name,
+  };
+}
+
+async function createSingleConnector(params) {
+  const {
+    startNodeId,
+    endNodeId,
+    startMagnet = "AUTO",
+    endMagnet = "AUTO",
+    strokeColor,
+    strokeWeight,
+    connectorLineType,
+    text,
+  } = params || {};
+
+  if (figma.editorType !== "figjam") {
+    throw new Error("create_connector is only available in FigJam");
+  }
+
+  if (!startNodeId || !endNodeId) {
+    throw new Error("Both startNodeId and endNodeId are required");
+  }
+
+  const startNode = await figma.getNodeByIdAsync(startNodeId);
+  if (!startNode) throw new Error(`Start node not found: ${startNodeId}`);
+
+  const endNode = await figma.getNodeByIdAsync(endNodeId);
+  if (!endNode) throw new Error(`End node not found: ${endNodeId}`);
+
+  const connector = figma.createConnector();
+
+  connector.connectorStart = {
+    endpointNodeId: startNodeId,
+    magnet: startMagnet,
+  };
+
+  connector.connectorEnd = {
+    endpointNodeId: endNodeId,
+    magnet: endMagnet,
+  };
+
+  if (connectorLineType) {
+    connector.connectorLineType = connectorLineType;
+  }
+
+  if (strokeColor) {
+    connector.strokes = [{
+      type: "SOLID",
+      color: {
+        r: parseFloat(strokeColor.r) || 0,
+        g: parseFloat(strokeColor.g) || 0,
+        b: parseFloat(strokeColor.b) || 0,
+      },
+      opacity: parseFloat(strokeColor.a) || 1,
+    }];
+  }
+
+  if (strokeWeight !== undefined) {
+    connector.strokeWeight = strokeWeight;
+  }
+
+  if (text) {
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    connector.text.characters = text;
+  }
+
+  return {
+    id: connector.id,
+    connectorLineType: connector.connectorLineType,
+    startNodeId: startNodeId,
+    endNodeId: endNodeId,
+    text: text || "",
   };
 }
